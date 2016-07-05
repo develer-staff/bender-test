@@ -3,8 +3,6 @@
 package main
 
 import (
-	"crypto/sha1"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
@@ -13,17 +11,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/satori/go.uuid"
 )
-
-// NewHash returns a unique sha1 hash.
-func NewHash() string {
-	h := sha1.New()
-	u := fmt.Sprintf("%s", uuid.NewV4())
-
-	h.Write([]byte(u))
-	return hex.EncodeToString(h.Sum(nil))
-}
 
 // RunScript parses the API request and extracts the script name and arguments
 // with the appropriate checks.
@@ -40,12 +28,17 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 	script := r.FormValue("script")
 
 	if script != "" {
+		args := r.Form["arg"]
 		options := fmt.Sprintf(strings.Join(r.Form["arg"], " "))
 		uuid := NewHash()
 
 		w.Write([]byte(fmt.Sprintf("Script: %s\n", script)))
 		w.Write([]byte(fmt.Sprintf("Options: %s\n", options)))
 		w.Write([]byte(fmt.Sprintf("UUID: %s\n", uuid)))
+
+		out := Runner(script, args)
+		w.Write([]byte(out))
+		log.Printf("Output: \n%s", out)
 	} else {
 		fmt.Fprintln(w, "ERROR  no script specified")
 	}

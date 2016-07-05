@@ -1,3 +1,4 @@
 #!/bin/bash
 
-echo $@
+echo "running $0 ..."
+echo "args: $@"

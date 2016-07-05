@@ -1,1 +1,53 @@
 2016/07/05 11:56:31 Responding to /run request from localhost:1337
+2016/07/05 12:57:10 Responding to /run request from localhost:1337
+2016/07/05 12:57:43 Responding to /run request from localhost:1337
+2016/07/05 12:58:17 Responding to /run request from localhost:1337
+2016/07/05 12:59:41 Responding to /run request from localhost:1337
+2016/07/05 12:59:41 Output: 
+
+2016/07/05 13:00:03 Responding to /run request from localhost:1337
+2016/07/05 13:00:03 Output: 
+
+2016/07/05 14:03:57 Responding to /run request from localhost:1337
+2016/07/05 14:03:57 Output: 
+
+2016/07/05 14:11:53 Responding to /run request from localhost:1337
+2016/07/05 14:11:53 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: 
+2016/07/05 15:16:08 Responding to /run request from localhost:1337
+2016/07/05 15:16:08 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:09 Responding to /run request from localhost:1337
+2016/07/05 15:16:09 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:10 Responding to /run request from localhost:1337
+2016/07/05 15:16:10 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:11 Responding to /run request from localhost:1337
+2016/07/05 15:16:11 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:11 Responding to /run request from localhost:1337
+2016/07/05 15:16:11 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:12 Responding to /run request from localhost:1337
+2016/07/05 15:16:12 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:13 Responding to /run request from localhost:1337
+2016/07/05 15:16:13 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:14 Responding to /run request from localhost:1337
+2016/07/05 15:16:14 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
+2016/07/05 15:16:15 Responding to /run request from localhost:1337
+2016/07/05 15:16:15 Output: 
+running /home/thomas/go/src/github.com/thomaspaino/robotester/data/example.sh ...
+args: --yuri trash
