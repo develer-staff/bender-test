@@ -5,19 +5,17 @@ import (
 	"os/exec"
 )
 
-func runner(name string, param []string) string {
+func Runner(name string, param []string) string {
 	/*Execute the specified script with is parameters
 	  and return the output*/
 	cmd := exec.Command("bash", name)
-	output := ""
-
+	var output string
 	for _, item := range param {
 		cmd.Args = append(cmd.Args, item)
 	}
 	out, err := cmd.Output()
 	if err != nil {
-		fmt.Println("Error occurred")
-		output = fmt.Sprintf("%s", err)
+		output = fmt.Sprintf("Error occurred\n%s", err)
 	} else {
 		output = fmt.Sprintf("%s", out)
 	}
