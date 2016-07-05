@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 )
@@ -28,17 +28,24 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 	script := r.FormValue("script")
 
 	if script != "" {
-		args := r.Form["arg"]
-		options := fmt.Sprintf(strings.Join(r.Form["arg"], " "))
-		uuid := NewHash()
+		if hasScript(script) {
 
-		w.Write([]byte(fmt.Sprintf("Script: %s\n", script)))
-		w.Write([]byte(fmt.Sprintf("Options: %s\n", options)))
-		w.Write([]byte(fmt.Sprintf("UUID: %s\n", uuid)))
+			args := r.Form["arg"]
+			uuid := NewHash()
+			wd, _ := os.Getwd()
+			path := filepath.Join(wd, DIR_SCRIPTS, script)
+			out := Runner(path, args)
 
-		out := Runner(script, args)
-		w.Write([]byte(out))
-		log.Printf("Output: \n%s", out)
+			w.Write([]byte(fmt.Sprintf("Script: %s\n", script)))
+			w.Write([]byte(fmt.Sprintf("Full Path: %s\n", path)))
+			w.Write([]byte(fmt.Sprintf("Options: %s\n", args)))
+			w.Write([]byte(fmt.Sprintf("UUID: %s\n", uuid)))
+			fmt.Fprintln(w, "\n==== BEGIN OUTPUT ====")
+			w.Write([]byte(out))
+			fmt.Fprintln(w, "==== END OUTPUT ====")
+		} else {
+			fmt.Fprintf(w, "ERROR  no script named %s found in %s", script, DIR_SCRIPTS)
+		}
 	} else {
 		fmt.Fprintln(w, "ERROR  no script specified")
 	}

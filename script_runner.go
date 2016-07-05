@@ -8,7 +8,7 @@ import (
 )
 
 // default scripts directory
-var DIR_SCRIPTS string = "data"
+var DIR_SCRIPTS string = "scripts"
 
 // Runner executes the specified script with the given parameters and returns
 // the output
