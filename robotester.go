@@ -6,8 +6,10 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -50,9 +52,16 @@ func RunScript(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	router := mux.NewRouter().StrictSlash(true)
+	// create and open log file 'robotester.log'
+	logfile, err := os.OpenFile("robotester.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalln("Failed to open log file", logfile, ":", err)
+	}
+	multilog := io.MultiWriter(logfile, os.Stdout)
+	log.SetOutput(multilog)
 
-	// accept GET queries on /run
+	// init http handlers
+	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/run", RunScript).
 		Methods("GET")
 
