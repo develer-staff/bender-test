@@ -6,6 +6,8 @@ import (
 )
 
 func runner(name string, param []string) string {
+	/*Execute the specified script with is parameters
+	  and return the output*/
 	cmd := exec.Command("bash", name)
 	output := ""
 
