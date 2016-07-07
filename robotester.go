@@ -3,42 +3,30 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
-// GetArgs parses a URL and returns a slice of strings maintaining the order of
-// keys and values
-func GetArgs(u *url.URL) []string {
-	q := strings.Split(u.String(), "?")[1]
-	order := strings.Split(q, "&")
-
-	var opts []string
-	for _, v := range order {
-		if v != "" {
-			if strings.ContainsAny(v, "=") {
-				t := strings.SplitN(v, "=", 2)
-				key := t[0]
-				value := t[1]
-				opts = append(opts, key)
-
-				if value != "" {
-					opts = append(opts, value)
-				}
-			} else {
-				opts = append(opts, v)
-			}
-		}
+// NewHash returns a sha1 hash of a randomly generated string of the specified
+// size
+func NewHash(size int) string {
+	chars := make([]byte, size)
+	for i := 0; i < size; i++ {
+		chars[i] = byte(rand.Intn(255))
 	}
-	return opts
+	h := sha1.New()
+	h.Write([]byte(string(chars)))
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // RunScript parses the API request and extracts the script name and arguments
@@ -46,38 +34,39 @@ func GetArgs(u *url.URL) []string {
 // The request must have a 'script' field with the name of the script to call and
 // optional 'arg' fields.
 // Example: script.py foo -bar 42
-// 			=> /run/script.py?foo=-bar&42
-//			=> /run/script.py?foo&-bar=42
+//			=> /run/script.py?args=foo+-bar+42
 // If the request is valid, the script dispatcher module is called.
 func RunScript(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Responding to /run request from %s\n", r.Host)
 
-	queries := mux.Vars(r)
+	vars := mux.Vars(r)
+	r.ParseForm()
 	w.WriteHeader(http.StatusOK)
-	script := queries["script"]
+	script := vars["script"]
 
-	if script != "" {
-		if hasScript(script) {
+	if hasScript(script) {
+		args := r.Form["args"]
+		uuid := NewHash(32)
+		wd, _ := os.Getwd()
+		path := filepath.Join(wd, DIR_SCRIPTS, script)
+		out := Runner(path, args)
 
-			args := GetArgs(r.URL)
-			uuid := NewHash()
-			wd, _ := os.Getwd()
-			path := filepath.Join(wd, DIR_SCRIPTS, script)
-			out := Runner(path, args)
+		w.Write([]byte(fmt.Sprintf("Script: %s\n", script)))
+		w.Write([]byte(fmt.Sprintf("Args: %s\n", args)))
+		w.Write([]byte(fmt.Sprintf("Full Path: %s\n", path)))
+		w.Write([]byte(fmt.Sprintf("UUID: %s\n", uuid)))
 
-			w.Write([]byte(fmt.Sprintf("Script: %s\n", script)))
-			w.Write([]byte(fmt.Sprintf("Full Path: %s\n", path)))
-			w.Write([]byte(fmt.Sprintf("UUID: %s\n", uuid)))
+		fmt.Fprintln(w, "\n==== BEGIN SCRIPT OUTPUT ====")
+		w.Write([]byte(out))
+		fmt.Fprintln(w, "==== END SCRIPT OUTPUT ====")
 
-			fmt.Fprintln(w, "\n==== BEGIN OUTPUT ====")
-			w.Write([]byte(out))
-			fmt.Fprintln(w, "==== END OUTPUT ====")
-		} else {
-			fmt.Fprintf(w, "ERROR  no script named %s found in %s", script, DIR_SCRIPTS)
-		}
 	} else {
-		fmt.Fprintln(w, "ERROR  no script specified")
+		fmt.Fprintf(w, "ERROR  no script named %s found in %s", script, DIR_SCRIPTS)
 	}
+}
+
+func init() {
+	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 func main() {
@@ -91,8 +80,7 @@ func main() {
 
 	// init http handlers
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/run/{script}", RunScript).
-		Methods("GET")
+	router.HandleFunc("/run/{script}", RunScript).Methods("GET")
 
 	// start http server
 	log.Fatal(http.ListenAndServe(":1337", router))
