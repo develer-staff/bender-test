@@ -7,30 +7,64 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gocraft/web"
 )
 
-func RunHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("I handle /run requests!\n"))
+type Context struct {
+	scripts_dir string
 }
 
-func LogHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("I handle /log requests!\n"))
+// SetDefaults initializes Context variables
+func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
+	c.scripts_dir = "scripts"
+	next(w, r)
 }
 
-func StatusHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("I handle /status requests!\n"))
+// RunHandler handles /run requests
+func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
+	fmt.Fprintf(w, "Requested execution of script '%s'\n", r.PathParams["script"])
+}
+
+// LogHandler handles /log requests
+func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
+	if r.PathParams["script"] != "" {
+		fmt.Fprintf(w, "Requested log for script '%s'\n", r.PathParams["script"])
+	}
+
+	if r.PathParams["uuid"] != "" {
+		fmt.Fprintf(w, "Requested log for uuid '%s'\n", r.PathParams["uuid"])
+	}
+}
+
+// StatusHandler handles /status requests
+func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
+
+	if r.PathParams["script"] == "" && r.PathParams["uuid"] == "" {
+		fmt.Fprintln(w, "Requested server status (general)")
+		fmt.Fprintf(w, "  scripts dir: '%s'\n", c.scripts_dir)
+	}
+
+	if r.PathParams["script"] != "" {
+		fmt.Fprintf(w, "Requested job status for script '%s\n'", r.PathParams["script"])
+	}
+
+	if r.PathParams["uuid"] != "" {
+		fmt.Fprintf(w, "Requested job status for uuid '%s'\n", r.PathParams["uuid"])
+	}
 }
 
 func main() {
 	LogAppendLine(fmt.Sprintf("START  %s", time.Now()))
 
 	// init http handlers
-	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/run/{script}", RunHandler).Methods("GET")
-	router.HandleFunc("/log/script/{script}", LogHandler).Methods("GET")
-	router.HandleFunc("/log/uuid/{uuid}", LogHandler).Methods("GET")
-	router.HandleFunc("/status", StatusHandler).Methods("GET")
+	router := web.New(Context{})
+	router.Middleware((*Context).SetDefaults)
+	router.Get("/run/:script", (*Context).RunHandler)
+	router.Get("/log/script/:script", (*Context).LogHandler)
+	router.Get("/log/uuid/:uuid", (*Context).LogHandler)
+	router.Get("/status", (*Context).StatusHandler)
+	router.Get("/status/script/:script", (*Context).StatusHandler)
+	router.Get("/status/uuid/:uuid", (*Context).StatusHandler)
 
 	// start http server
 	LogFatal(http.ListenAndServe(":8080", router))
