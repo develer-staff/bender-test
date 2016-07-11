@@ -3,15 +3,30 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/gocraft/web"
+	"github.com/satori/go.uuid"
 )
 
 type Context struct {
 	ScriptsDir string
+}
+
+type Job struct {
+	Script  string
+	Path    string
+	Args    []string
+	Uuid    string
+	Output  string
+	Exit    string
+	Request time.Time
+	Start   time.Time
+	Finish  time.Time
+	Status  string
 }
 
 // SetDefaults initializes Context variables
@@ -22,7 +37,27 @@ func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.Nex
 
 // RunHandler handles /run requests
 func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
-	fmt.Fprintf(w, "Requested execution of script '%s'\n", r.PathParams["script"])
+	LogAppendLine(fmt.Sprintf("Requested execution of script '%s'", r.PathParams["script"]))
+	r.ParseForm()
+
+	job := Job{
+		Script:  r.PathParams["script"],
+		Args:    r.Form["args"],
+		Uuid:    uuid.NewV4().String(),
+		Path:    c.ScriptsDir,
+		Request: time.Now(),
+		Status:  "queued"}
+
+	// encode job into a json
+	js, err := json.Marshal(job)
+	if err != nil {
+		LogErrors(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
 }
 
 // LogHandler handles /log requests
