@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/thomaspaino/robotester",
+	"ImportPath": "github.com/develersrl/bender-test",
 	"GoVersion": "go1.6",
 	"GodepVersion": "v74",
 	"Deps": [

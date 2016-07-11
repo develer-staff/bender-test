@@ -11,12 +11,12 @@ import (
 )
 
 type Context struct {
-	scripts_dir string
+	ScriptsDir string
 }
 
 // SetDefaults initializes Context variables
 func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
-	c.scripts_dir = "scripts"
+	c.ScriptsDir = GetScriptsDir()
 	next(w, r)
 }
 
@@ -29,27 +29,20 @@ func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
 	if r.PathParams["script"] != "" {
 		fmt.Fprintf(w, "Requested log for script '%s'\n", r.PathParams["script"])
-	}
-
-	if r.PathParams["uuid"] != "" {
+	} else if r.PathParams["uuid"] != "" {
 		fmt.Fprintf(w, "Requested log for uuid '%s'\n", r.PathParams["uuid"])
 	}
 }
 
 // StatusHandler handles /status requests
 func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
-
-	if r.PathParams["script"] == "" && r.PathParams["uuid"] == "" {
-		fmt.Fprintln(w, "Requested server status (general)")
-		fmt.Fprintf(w, "  scripts dir: '%s'\n", c.scripts_dir)
-	}
-
 	if r.PathParams["script"] != "" {
 		fmt.Fprintf(w, "Requested job status for script '%s\n'", r.PathParams["script"])
-	}
-
-	if r.PathParams["uuid"] != "" {
+	} else if r.PathParams["uuid"] != "" {
 		fmt.Fprintf(w, "Requested job status for uuid '%s'\n", r.PathParams["uuid"])
+	} else {
+		fmt.Fprintln(w, "Requested server status (general)")
+		fmt.Fprintf(w, "  scripts dir: '%s'\n", c.ScriptsDir)
 	}
 }
 
