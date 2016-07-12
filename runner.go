@@ -13,6 +13,7 @@ import (
 
 var scriptsDir string
 var jobQueue chan Job
+var jobDone chan Job
 
 func GetScriptsDir() string {
 	return scriptsDir
@@ -22,16 +23,12 @@ func SetScriptsDir(dir string) {
 	scriptsDir = dir
 }
 
-func init() {
-	scriptsDir = "scripts"
-}
-
 // Runner executes the specified script with the given parameters and returns
 // the output
 func Runner(name string, param []string) string {
 	cmd := exec.Command(name, param...)
 	var output string
-	out, err := cmd.Output()
+	err := cmd.Start()
 	if err != nil {
 		output = fmt.Sprintf("Error occurred\n%s", err)
 	} else {
@@ -46,8 +43,7 @@ func HasScript(search string) bool {
 	if err != nil {
 		return false
 	}
-	k := len(files)
-	for i := 0; i < k; i++ {
+	for i := range files {
 		namefile := files[i].Name()[0 : len(files[i].Name())-len(filepath.Ext(files[i].Name()))]
 		if namefile == search {
 			return true
@@ -63,11 +59,9 @@ func ListScripts() []string {
 		return nil
 	}
 	names := []string{}
-	k := len(files)
-	for i := 0; i < k; i++ {
+	for i := range files {
 		names = append(names, files[i].Name())
 	}
-	fmt.Println(names)
 	return names
 }
 
@@ -96,6 +90,7 @@ func RunWorker() {
 		job.Finish = time.Now()
 		LogAppendLine(fmt.Sprintf("WORKER  finished job %s", job.Uuid))
 		LogAppendLine(fmt.Sprintf("OUTPUT  %s", job.Output))
+		jobDone <- job
 	}
 }
 
@@ -120,4 +115,5 @@ func NewJob(script string, args []string, path string, requested time.Time) (Job
 func init() {
 	scriptsDir = "scripts"
 	jobQueue = make(chan Job, 2)
+	jobDone = make(chan Job)
 }

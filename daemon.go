@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"path/filepath"
 
 	"github.com/gocraft/web"
 )
@@ -80,11 +81,27 @@ func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 
 // LogHandler handles /log requests
 func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
-	if r.PathParams["script"] != "" {
-		fmt.Fprintf(w, "Requested log for script '%s'\n", r.PathParams["script"])
-	} else if r.PathParams["uuid"] != "" {
-		fmt.Fprintf(w, "Requested log for uuid '%s'\n", r.PathParams["uuid"])
+	output := ""
+
+	if script := r.PathParams["script"]; script != "" {
+		line := fmt.Sprintf("Requested logs for script '%s'\n", script)
+		LogAppendLine(line)
+
+		dir_path, _ := filepath.Abs(filepath.Join("log", script))
+		output = ReadLogDir(dir_path)
+
+	} else if uuid := r.PathParams["uuid"]; uuid != "" {
+		line := fmt.Sprintf("Requested log for uuid '%s'\n", uuid)
+		LogAppendLine(line)
+
+		path := FindLog(uuid)
+		if path == "log not found" {
+			output = path
+		} else {
+			output = ReadLog(path)
+		}
 	}
+	fmt.Fprintln(w, output)
 }
 
 // StatusHandler handles /status requests
@@ -114,6 +131,9 @@ func main() {
 
 	// worker
 	go RunWorker()
+
+	go WriteLog()
+
 
 	// start http server
 	LogFatal(http.ListenAndServe(":8080", router))
