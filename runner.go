@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"time"
-	"bytes"
 
 	"github.com/satori/go.uuid"
 )
@@ -24,9 +24,8 @@ func SetScriptsDir(dir string) {
 	scriptsDir = dir
 }
 
-
 // hasScript checks for the script existance
-func HasScript(search string) (bool, string){
+func HasScript(search string) (bool, string) {
 	files, err := ioutil.ReadDir(scriptsDir)
 	if err != nil {
 		return false, ""
@@ -66,7 +65,6 @@ func RunWorker() {
 		cmd.Stdout = cmdOutput
 		err := cmd.Start()
 
-
 		if err != nil {
 			job.Output = err.Error()
 			job.Status = "Runtime error"
@@ -75,7 +73,6 @@ func RunWorker() {
 			job.Output = string(cmdOutput.Bytes())
 			job.Status = "Completed"
 		}
-
 
 		job.Finish = time.Now()
 		LogAppendLine(fmt.Sprintf("WORKER  finished job %s", job.Uuid))
@@ -91,9 +88,9 @@ func NewJob(script string, args []string, path string, requested time.Time) (Job
 		Script:  script,
 		Args:    args,
 		Uuid:    uuid.NewV4().String(),
-		Request: time.Now()}
+		Request: requested}
 
-	check, name	:= HasScript(script)
+	check, name := HasScript(script)
 	if !check {
 		err := errors.New(fmt.Sprintf("No script '%s' found in dir '%s'", script, path))
 		return job, err
