@@ -1,13 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
+	"time"
+
+	"github.com/satori/go.uuid"
 )
 
 var scriptsDir string
+var jobQueue chan Job
 
 func GetScriptsDir() string {
 	return scriptsDir
@@ -64,4 +69,55 @@ func ListScripts() []string {
 	}
 	fmt.Println(names)
 	return names
+}
+
+// RunWorker listens on jobQueue for new jobs and executes them
+func RunWorker() {
+	for {
+		job := <-jobQueue
+		job.Status = "Running"
+		job.Start = time.Now()
+		LogAppendLine(fmt.Sprintf("WORKER  running job %s", job.Uuid))
+
+		cmd := exec.Command("/bin/bash", job.Script)
+		cmd.Args = job.Args
+
+		out, err := cmd.Output()
+		if err != nil {
+			job.Status = "runtime error"
+			job.Output = fmt.Sprintf("Error occurred\n%s", err)
+		} else {
+			job.Status = "completed"
+			job.Output = fmt.Sprintf("%s", out)
+		}
+
+		time.Sleep(time.Second * 10)
+
+		job.Finish = time.Now()
+		LogAppendLine(fmt.Sprintf("WORKER  finished job %s", job.Uuid))
+		LogAppendLine(fmt.Sprintf("OUTPUT  %s", job.Output))
+	}
+}
+
+// NewJob determines if a scripts can be executed and returns a job
+// struct
+func NewJob(script string, args []string, path string, requested time.Time) (Job, error) {
+	job := Job{
+		Script:  script,
+		Args:    args,
+		Uuid:    uuid.NewV4().String(),
+		Path:    path,
+		Request: time.Now()}
+
+	if !HasScript(script) {
+		err := errors.New(fmt.Sprintf("No script '%s' found in dir '%s'", script, path))
+		return job, err
+	}
+
+	return job, nil
+}
+
+func init() {
+	scriptsDir = "scripts"
+	jobQueue = make(chan Job, 2)
 }

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gocraft/web"
-	"github.com/satori/go.uuid"
 )
 
 type Context struct {
@@ -29,6 +28,10 @@ type Job struct {
 	Status  string
 }
 
+func (job Job) ToJson() ([]byte, error) {
+	return json.Marshal(job)
+}
+
 // SetDefaults initializes Context variables
 func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
 	c.ScriptsDir = GetScriptsDir()
@@ -38,25 +41,40 @@ func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.Nex
 // RunHandler handles /run requests
 func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 	LogAppendLine(fmt.Sprintf("Requested execution of script '%s'", r.PathParams["script"]))
+
+	// parse http request query
 	r.ParseForm()
+	script := r.PathParams["script"]
+	args := r.Form["args"]
+	path := c.ScriptsDir
+	requested := time.Now()
 
-	job := Job{
-		Script:  r.PathParams["script"],
-		Args:    r.Form["args"],
-		Uuid:    uuid.NewV4().String(),
-		Path:    c.ScriptsDir,
-		Request: time.Now(),
-		Status:  "queued"}
-
-	// encode job into a json
-	js, err := json.Marshal(job)
+	// Validate request and build job
+	w.Header().Set("Content-Type", "application/json")
+	job, err := NewJob(script, args, path, requested)
 	if err != nil {
+		LogErrors(err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Queue job (if there's space left)
+	select {
+	case jobQueue <- job:
+	default:
+		LogAppendLine(fmt.Sprintf("NOQUEUE  job queue is full :("))
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+
+	// Build and send response json
+	job.Status = "queued"
+	js, errj := job.ToJson()
+	if errj != nil {
 		LogErrors(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
 
@@ -93,6 +111,9 @@ func main() {
 	router.Get("/status", (*Context).StatusHandler)
 	router.Get("/status/script/:script", (*Context).StatusHandler)
 	router.Get("/status/uuid/:uuid", (*Context).StatusHandler)
+
+	// worker
+	go RunWorker()
 
 	// start http server
 	LogFatal(http.ListenAndServe(":8080", router))
