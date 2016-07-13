@@ -56,7 +56,7 @@ func ListScripts() []string {
 func RunWorker() {
 	for {
 		job := <-jobQueue
-		job.Status = "Running"
+		job.Status = working
 		job.Start = time.Now()
 		LogAppendLine(fmt.Sprintf("WORKER  running job %s", job.Uuid))
 
@@ -67,9 +67,9 @@ func RunWorker() {
 
 		if err != nil {
 			job.Exit = err.Error()
-			job.Status = "Runtime error"
+			job.Status = failed
 		} else {
-			job.Status = "Completed"
+			job.Status = completed
 		}
 
 		job.Output = string(cmdOutput.Bytes())
@@ -92,6 +92,7 @@ func NewJob(script string, args []string, path string, requested time.Time) (Job
 	check, name := HasScript(script)
 	if !check {
 		err := errors.New(fmt.Sprintf("No script '%s' found in dir '%s'", script, path))
+		job.Status = notfound
 		return job, err
 	}
 

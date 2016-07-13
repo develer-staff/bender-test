@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 	"path/filepath"
+	"time"
 
 	"github.com/gocraft/web"
 )
@@ -26,12 +26,23 @@ type Job struct {
 	Request time.Time
 	Start   time.Time
 	Finish  time.Time
-	Status  string
+	Status  JobStatus
 }
 
 func (job Job) ToJson() ([]byte, error) {
 	return json.Marshal(job)
 }
+
+type JobStatus string
+
+const (
+	queued    = "queued"
+	notfound  = "not found"
+	queuefull = "queue full"
+	working   = "working"
+	failed    = "failed"
+	completed = "completed"
+)
 
 // SetDefaults initializes Context variables
 func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
@@ -63,13 +74,13 @@ func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 	select {
 	case jobQueue <- job:
 	default:
-		LogAppendLine(fmt.Sprintf("NOQUEUE  job queue is full :("))
+		LogAppendLine("NOQUEUE  job queue is full :(")
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
 
 	// Build and send response json
-	job.Status = "queued"
+	job.Status = queued
 	js, errj := job.ToJson()
 	if errj != nil {
 		LogErrors(err)
@@ -84,14 +95,14 @@ func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
 	output := ""
 
 	if script := r.PathParams["script"]; script != "" {
-		line := fmt.Sprintf("Requested logs for script '%s'\n", script)
+		line := fmt.Sprintf("Requested logs for script '%s'", script)
 		LogAppendLine(line)
 
 		dir_path, _ := filepath.Abs(filepath.Join("log", script))
 		output = ReadLogDir(dir_path)
 
 	} else if uuid := r.PathParams["uuid"]; uuid != "" {
-		line := fmt.Sprintf("Requested log for uuid '%s'\n", uuid)
+		line := fmt.Sprintf("Requested log for uuid '%s'", uuid)
 		LogAppendLine(line)
 
 		path := FindLog(uuid)
@@ -107,9 +118,9 @@ func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
 // StatusHandler handles /status requests
 func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
 	if r.PathParams["script"] != "" {
-		fmt.Fprintf(w, "Requested job status for script '%s\n'", r.PathParams["script"])
+		fmt.Fprintf(w, "Requested job status for script '%s'", r.PathParams["script"])
 	} else if r.PathParams["uuid"] != "" {
-		fmt.Fprintf(w, "Requested job status for uuid '%s'\n", r.PathParams["uuid"])
+		fmt.Fprintf(w, "Requested job status for uuid '%s'", r.PathParams["uuid"])
 	} else {
 		fmt.Fprintln(w, "Requested server status (general)")
 		fmt.Fprintf(w, "  scripts dir: '%s'\n", c.ScriptsDir)
@@ -133,7 +144,6 @@ func main() {
 	go RunWorker()
 
 	go WriteLog()
-
 
 	// start http server
 	LogFatal(http.ListenAndServe(":8080", router))
