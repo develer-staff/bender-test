@@ -61,7 +61,7 @@ func WriteLog() {
 		} else {
 			fmt.Fprintf(outfile, "%s", joutput)
 		}
-		LogAppendLine(fmt.Sprintf("LOGGER log succesfully wrote"))
+		LogAppendLine(fmt.Sprintf("LOGGER log wrote succesfully"))
 	}
 }
 
