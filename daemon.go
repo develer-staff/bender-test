@@ -4,6 +4,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -108,6 +109,7 @@ func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
 		path := FindLog(uuid)
 		if path == "log not found" {
 			output = path
+			w.WriteHeader(http.StatusNotFound)
 		} else {
 			output = ReadLog(path)
 		}
@@ -128,7 +130,10 @@ func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
 }
 
 func main() {
-	LogAppendLine(fmt.Sprintf("START  %s", time.Now()))
+	// cmdline args
+	port := flag.Int("port", 8080, "http listening port")
+	flag.Parse()
+	portStr := fmt.Sprintf(":%d", *port)
 
 	// init http handlers
 	router := web.New(Context{})
@@ -140,11 +145,10 @@ func main() {
 	router.Get("/status/script/:script", (*Context).StatusHandler)
 	router.Get("/status/uuid/:uuid", (*Context).StatusHandler)
 
-	// worker
 	go RunWorker()
-
 	go WriteLog()
 
 	// start http server
-	LogFatal(http.ListenAndServe(":8080", router))
+	LogAppendLine(fmt.Sprintf("Listening on port %d", *port))
+	LogFatal(http.ListenAndServe(portStr, router))
 }
