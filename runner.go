@@ -63,20 +63,19 @@ func RunWorker() {
 		cmd := exec.Command(job.Path, job.Args...)
 		cmdOutput := &bytes.Buffer{}
 		cmd.Stdout = cmdOutput
-		err := cmd.Start()
+		err := cmd.Run()
 
 		if err != nil {
-			job.Output = err.Error()
+			job.Exit = err.Error()
 			job.Status = "Runtime error"
 		} else {
-			cmd.Wait()
-			job.Output = string(cmdOutput.Bytes())
 			job.Status = "Completed"
 		}
 
+		job.Output = string(cmdOutput.Bytes())
 		job.Finish = time.Now()
 		LogAppendLine(fmt.Sprintf("WORKER  finished job %s", job.Uuid))
-		LogAppendLine(fmt.Sprintf("OUTPUT  %s", job.Output))
+
 		jobDone <- job
 	}
 }

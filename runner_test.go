@@ -8,7 +8,7 @@ import (
 )
 
 func TestListScripts(t *testing.T) {
-	expected := []string{"foo.sh", "sleep.sh"}
+	expected := []string{"fail.sh", "foo.sh", "sleep.sh"}
 	actual := ListScripts()
 
 	if !reflect.DeepEqual(expected, actual) {
