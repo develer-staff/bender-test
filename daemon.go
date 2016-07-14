@@ -7,57 +7,89 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gocraft/web"
+	"github.com/gorilla/mux"
 )
 
-type Context struct {
-	ScriptsDir string
+type JobStatus string
+
+const (
+	JOB_QUEUED     = "queued"
+	JOB_NOT_FOUND  = "not found"
+	JOB_QUEUE_FULL = "queue full"
+	JOB_WORKING    = "working"
+	JOB_FAILED     = "failed"
+	JOB_COMPLETED  = "completed"
+)
+
+type Job struct {
+	Script  string    `json:"script"`
+	Path    string    `json:"path"`
+	Args    []string  `json:"args"`
+	Uuid    string    `json:"uuid"`
+	Output  string    `json:"output"`
+	Exit    string    `json:"exit"`
+	Request time.Time `json:"request"`
+	Start   time.Time `json:"start"`
+	Finish  time.Time `json:"finish"`
+	Status  JobStatus `json:"status"`
 }
 
-// SetDefaults initializes Context variables
-func (c *Context) SetDefaults(w web.ResponseWriter, r *web.Request, next web.NextMiddlewareFunc) {
-	c.ScriptsDir = GetScriptsDir()
-	next(w, r)
+type appContext struct {
+	ScriptsDir string
+	JobQueue   chan Job
+	JobDone    chan Job
+}
+
+// initAppContext initializes default scripts directory and channels for job
+// handling
+func initAppContext() *appContext {
+	context := &appContext{
+		ScriptsDir: GetScriptsDir(),
+		JobQueue:   make(chan Job, 10),
+		JobDone:    make(chan Job)}
+	return context
 }
 
 // RunHandler handles /run requests
-func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
-	fmt.Fprintf(w, "Requested execution of script '%s'\n", r.PathParams["script"])
+func (a *appContext) RunHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	fmt.Fprintf(w, "Requested execution of script '%s'\n", vars["script"])
 }
 
 // LogHandler handles /log requests
-func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
-	if r.PathParams["script"] != "" {
-		fmt.Fprintf(w, "Requested log for script '%s'\n", r.PathParams["script"])
-	} else if r.PathParams["uuid"] != "" {
-		fmt.Fprintf(w, "Requested log for uuid '%s'\n", r.PathParams["uuid"])
+func (a *appContext) LogHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	if vars["script"] != "" {
+		fmt.Fprintf(w, "Requested log for script '%s'\n", vars["script"])
+	} else if vars["uuid"] != "" {
+		fmt.Fprintf(w, "Requested log for uuid '%s'\n", vars["uuid"])
 	}
 }
 
 // StatusHandler handles /status requests
-func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
-	if r.PathParams["script"] != "" {
-		fmt.Fprintf(w, "Requested job status for script '%s\n'", r.PathParams["script"])
-	} else if r.PathParams["uuid"] != "" {
-		fmt.Fprintf(w, "Requested job status for uuid '%s'\n", r.PathParams["uuid"])
+func (a *appContext) StatusHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	if vars["script"] != "" {
+		fmt.Fprintf(w, "Requested job status for script '%s\n'", vars["script"])
+	} else if vars["uuid"] != "" {
+		fmt.Fprintf(w, "Requested job status for uuid '%s'\n", vars["uuid"])
 	} else {
 		fmt.Fprintln(w, "Requested server status (general)")
-		fmt.Fprintf(w, "  scripts dir: '%s'\n", c.ScriptsDir)
 	}
 }
 
 func main() {
-	LogAppendLine(fmt.Sprintf("START  %s", time.Now()))
+	LogAppendLine("SERVER  listening...")
+
+	// init context
+	context := initAppContext()
 
 	// init http handlers
-	router := web.New(Context{})
-	router.Middleware((*Context).SetDefaults)
-	router.Get("/run/:script", (*Context).RunHandler)
-	router.Get("/log/script/:script", (*Context).LogHandler)
-	router.Get("/log/uuid/:uuid", (*Context).LogHandler)
-	router.Get("/status", (*Context).StatusHandler)
-	router.Get("/status/script/:script", (*Context).StatusHandler)
-	router.Get("/status/uuid/:uuid", (*Context).StatusHandler)
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/run/{script}", context.RunHandler).Methods("GET")
+	router.HandleFunc("/log/script/{script}", context.LogHandler).Methods("GET")
+	router.HandleFunc("/log/uuid/{uuid}", context.LogHandler).Methods("GET")
+	router.HandleFunc("/status", context.StatusHandler).Methods("GET")
 
 	// start http server
 	LogFatal(http.ListenAndServe(":8080", router))
