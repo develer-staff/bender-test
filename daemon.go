@@ -3,6 +3,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"time"
@@ -40,12 +41,31 @@ type appContext struct {
 	JobDone    chan Job
 }
 
+type cmdArgs struct {
+	jobQueueSize *int
+	serverPort   *int
+}
+
+// parseArgs parses the cmd-line arguments provided and returns a pointer
+// to the cmdArgs struct that holds them
+func parseArgs() *cmdArgs {
+	port := flag.Int("port", 8080, "http listening port")
+	jobQueueSize := flag.Int("queue", 10, "size of jobs queue")
+	flag.Parse()
+
+	args := &cmdArgs{
+		serverPort:   port,
+		jobQueueSize: jobQueueSize}
+
+	return args
+}
+
 // initAppContext initializes default scripts directory and channels for job
 // handling
-func initAppContext() *appContext {
+func (c *cmdArgs) initAppContext() *appContext {
 	context := &appContext{
 		ScriptsDir: GetScriptsDir(),
-		JobQueue:   make(chan Job, 10),
+		JobQueue:   make(chan Job, *c.jobQueueSize),
 		JobDone:    make(chan Job)}
 	return context
 }
@@ -79,10 +99,10 @@ func (a *appContext) StatusHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	LogAppendLine("SERVER  listening...")
-
-	// init context
-	context := initAppContext()
+	// parse cmd-line arguments and init context
+	args := parseArgs()
+	context := args.initAppContext()
+	LogAppendLine(fmt.Sprintf("SERVER  initialized job queue of size %d", *args.jobQueueSize))
 
 	// init http handlers
 	router := mux.NewRouter().StrictSlash(true)
@@ -92,5 +112,7 @@ func main() {
 	router.HandleFunc("/status", context.StatusHandler).Methods("GET")
 
 	// start http server
-	LogFatal(http.ListenAndServe(":8080", router))
+	LogAppendLine(fmt.Sprintf("SERVER  listening on port %d", *args.serverPort))
+	portStr := fmt.Sprintf(":%d", *args.serverPort)
+	LogFatal(http.ListenAndServe(portStr, router))
 }
