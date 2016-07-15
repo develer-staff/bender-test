@@ -12,6 +12,11 @@
 			"ImportPath": "github.com/gorilla/mux",
 			"Comment": "v1.1-13-g9fa818a",
 			"Rev": "9fa818a44c2bf1396a17f9d5a3c0f6dd39d2ff8e"
+		},
+		{
+			"ImportPath": "github.com/satori/go.uuid",
+			"Comment": "v1.1.0",
+			"Rev": "879c5887cd475cd7864858769793b2ceb0d44feb"
 		}
 	]
 }
