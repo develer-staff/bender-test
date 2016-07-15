@@ -44,6 +44,7 @@ type appContext struct {
 type cmdArgs struct {
 	jobQueueSize *int
 	serverPort   *int
+	scriptsDir   *string
 }
 
 // parseArgs parses the cmd-line arguments provided and returns a pointer
@@ -51,11 +52,13 @@ type cmdArgs struct {
 func parseArgs() *cmdArgs {
 	port := flag.Int("port", 8080, "http listening port")
 	jobQueueSize := flag.Int("queue", 10, "size of jobs queue")
+	scriptsDir := flag.String("dir", "scripts", "default scripts directory")
 	flag.Parse()
 
 	args := &cmdArgs{
 		serverPort:   port,
-		jobQueueSize: jobQueueSize}
+		jobQueueSize: jobQueueSize,
+		scriptsDir:   scriptsDir}
 
 	return args
 }
@@ -64,7 +67,7 @@ func parseArgs() *cmdArgs {
 // handling
 func (c *cmdArgs) initAppContext() *appContext {
 	context := &appContext{
-		ScriptsDir: GetScriptsDir(),
+		ScriptsDir: *c.scriptsDir,
 		JobQueue:   make(chan Job, *c.jobQueueSize),
 		JobDone:    make(chan Job)}
 	return context

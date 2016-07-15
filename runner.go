@@ -7,23 +7,9 @@ import (
 	"path/filepath"
 )
 
-var scriptsDir string
-
-func GetScriptsDir() string {
-	return scriptsDir
-}
-
-func SetScriptsDir(dir string) {
-	scriptsDir = dir
-}
-
-func init() {
-	scriptsDir = "scripts"
-}
-
 // Runner executes the specified script with the given parameters and returns
 // the output
-func Runner(name string, param []string) string {
+func (a *appContext) Runner(name string, param []string) string {
 	cmd := exec.Command(name, param...)
 	var output string
 	out, err := cmd.Output()
@@ -36,8 +22,8 @@ func Runner(name string, param []string) string {
 }
 
 // hasScript checks for the script existance
-func HasScript(search string) bool {
-	files, err := ioutil.ReadDir(scriptsDir)
+func (a *appContext) HasScript(search string) bool {
+	files, err := ioutil.ReadDir(a.ScriptsDir)
 	if err != nil {
 		return false
 	}
@@ -52,8 +38,8 @@ func HasScript(search string) bool {
 }
 
 // listScripts returns a list of scripts in the default script folder
-func ListScripts() []string {
-	files, err := ioutil.ReadDir(scriptsDir)
+func (a *appContext) ListScripts() []string {
+	files, err := ioutil.ReadDir(a.ScriptsDir)
 	if err != nil {
 		return nil
 	}
