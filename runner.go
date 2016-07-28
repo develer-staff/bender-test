@@ -32,7 +32,7 @@ type Job struct {
 
 type JobInterface interface {
 	Run(name, uuid string, args []string) int
-	UpdateState()
+	State()
 }
 
 var scriptsDir string
@@ -180,9 +180,9 @@ func Log() *chan string {
 		}
 
 		endReadStart <- true
-		LogDeb(logContextRunner, "finished reading, sent sync to chan")
+		LogDeb(logContextRunner, "finished reading, sent sync to chan 'endReadStart'")
 		endReadLog <- true
-		LogDeb(logContextRunner, "finished reading, sent sync to chan tmp")
+		LogDeb(logContextRunner, "finished reading, sent sync to chan 'endReadLog'")
 	}()
 
 	return &outChan
@@ -199,21 +199,21 @@ func (job *Job) State() {
 	}
 }
 
-func List() []string{
-    files, err := ioutil.ReadDir(GetScriptsDir())
-    var scripts []string
+func List() []string {
+	files, err := ioutil.ReadDir(GetScriptsDir())
+	var scripts []string
 
-    if err != nil {
-        LogErr(logContextRunner, "No scripts directory found")
-    } else {
-        for _, file := range files {
-            n := strings.LastIndexByte(file.Name(), '.')
-            if n > 0 {
-                scripts = append(scripts, file.Name()[:n])
-            } else {
-               scripts = append(scripts, file.Name())
-            }
-        }
-    }
-    return scripts
+	if err != nil {
+		LogErr(logContextRunner, "No scripts directory found")
+	} else {
+		for _, file := range files {
+			n := strings.LastIndexByte(file.Name(), '.')
+			if n > 0 {
+				scripts = append(scripts, file.Name()[:n])
+			} else {
+				scripts = append(scripts, file.Name())
+			}
+		}
+	}
+	return scripts
 }

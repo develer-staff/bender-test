@@ -42,6 +42,7 @@ func init() {
 				for time.Since(start) < timeout {
 					select {
 					case m := <-logChan:
+						LogDeb(logContextWorker, "output captured from stdoutpipe: %s", m)
 						rep.UpdateString(m)
 					case <-endReadLog:
 						LogDeb(logContextWorker, "received end of read sync")

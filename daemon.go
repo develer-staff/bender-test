@@ -4,9 +4,9 @@ package main
 
 import (
 	"encoding/json"
-	"time"
-	"net/http"
 	"html/template"
+	"net/http"
+	"time"
 
 	"github.com/gocraft/web"
 	"github.com/satori/go.uuid"
@@ -36,7 +36,7 @@ func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 
 	name := r.PathParams["script"]
 	uuid := uuid.NewV4().String()
-	timeout := 10000
+	timeout := 2000
 	params := r.Form
 
 	status, _ := daemon_localStatus.GetState()
@@ -49,9 +49,9 @@ func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 	js, err := json.Marshal(uuid)
 
 	if err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			LogErr(logContextDaemon, "json creation failed")
-			return
+		w.WriteHeader(http.StatusServiceUnavailable)
+		LogErr(logContextDaemon, "json creation failed")
+		return
 	}
 
 	w.Write(js)
@@ -67,15 +67,15 @@ func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
 	id := r.Form["uuid"][0]
 	var buffer []byte
 
-	if id != ""{
+	if id != "" {
 		buffer = Read(name, id, 0, 0)
 	}
 	js, err := json.Marshal(string(buffer))
 
 	if err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			LogErr(logContextDaemon, "json creation failed")
-			return
+		w.WriteHeader(http.StatusServiceUnavailable)
+		LogErr(logContextDaemon, "json creation failed")
+		return
 	}
 
 	w.Write(js)
@@ -117,9 +117,9 @@ func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
 func (c *Context) HomeHandler(w web.ResponseWriter, r *web.Request) {
 	LogInf(logContextDaemon, "Receive HOME[%v] request from: %v", "Daemon", r.RemoteAddr)
 	job := Job{Name: "hellosleep",
-			   Uuid: "acfjsif-909D",
-			   Created: time.Now(),
-			   Timeout: 54}
+		Uuid:    "acfjsif-909D",
+		Created: time.Now(),
+		Timeout: 54}
 
 	t := template.New("New template")
 	t, _ = template.ParseFiles("html/home.html")
