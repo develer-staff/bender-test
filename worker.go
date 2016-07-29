@@ -8,7 +8,8 @@ import (
 var __SubmitChannel chan Params
 var logContextWorker LoggerContext
 var worker_localStatus *StatusModule
-var endReadLog = make(chan bool)
+
+//var endReadLog = make(chan bool)
 
 type Params struct {
 	name    string
@@ -25,8 +26,8 @@ func init() {
 
 	__SubmitChannel = make(chan Params)
 	go func() {
-		for {
-			params := <-__SubmitChannel
+		for params := range __SubmitChannel {
+			//			params := <-__SubmitChannel
 			job := &Job{}
 			ret := job.Run(params.name, params.uuid, params.args)
 
@@ -37,27 +38,46 @@ func init() {
 				rep := &ReportContext{}
 				rep.New(params.name, params.uuid, start, true)
 				logChan := *Log()
+				job.Status = JOB_WORKING
 
 			timeToLive:
-				for time.Since(start) < timeout {
+				//				for time.Since(start) < timeout {
+				for {
 					select {
 					case m := <-logChan:
 						LogDeb(logContextWorker, "output captured from stdoutpipe: %s", m)
 						rep.UpdateString(m)
-					case <-endReadLog:
-						LogDeb(logContextWorker, "received end of read sync")
+						//					case <-endReadLog:
+						//						LogDeb(logContextWorker, "received end of read sync")
+						//						break timeToLive
+					case d := <-cmdDoneChan:
+						if d {
+							job.Status = JOB_COMPLETED
+						} else {
+							job.Status = JOB_FAILED
+						}
 						break timeToLive
-					default:
-						time.Sleep(20 * time.Millisecond)
+					case <-time.After(timeout):
+						LogWar(logContextWorker, "Execution timed out for %s", cmd.Path)
+						LogWar(logContextWorker, "Attempting to kill %s ...", cmd.Path)
+						//						job.Status = JOB_FAILED
+						err := cmd.Process.Kill()
+						if err != nil {
+							LogErr(logContextWorker, "failed to kill timedout process %s", cmd.Path)
+							panic(err)
+						}
+						//						break timeToLive
 					}
-					job.State()
+					//					job.State()
+					//					LogDeb(logContextWorker, "[out of select] updating state to: %s", job.Status)
+
 					worker_localStatus.SetState(*job)
 				}
 
-				if time.Since(start) > timeout {
-					LogWar(logContextWorker, "Execution timed out")
-					job.Status = JOB_FAILED
-				}
+				//				if time.Since(start) > timeout {
+				//					LogWar(logContextWorker, "Execution timed out")
+				//					job.Status = JOB_FAILED
+				//				}
 
 				worker_localStatus.SetState(*job)
 			} else {

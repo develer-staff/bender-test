@@ -100,8 +100,9 @@ func FakeState(job *Job) {
 
 var cmd = exec.Command("")
 var outChan = make(chan string, 1)
-var syncChan = make(chan bool)
-var endReadStart = make(chan bool)
+var logSynChan = make(chan bool)
+var logDoneChan = make(chan bool)
+var cmdDoneChan = make(chan bool)
 var logContextRunner LoggerContext
 
 //Initialize the script command
@@ -129,17 +130,27 @@ func (job *Job) Run(script, uuid string, args []string) int {
 
 //Run the command
 func Start() {
-	<-syncChan
+	// Wait for logger to be ready
+	<-logSynChan
 	time.Sleep(100 * time.Millisecond)
+
+	// Run the script
 	cmd.Start()
-	LogInf(logContextRunner, "Execution started...")
-	<-endReadStart
+	LogInf(logContextRunner, "Execution started for %s ...", cmd.Path)
+
+	// Wait for logger to finish reading from pipes
+	<-logDoneChan
 	err := cmd.Wait()
-	LogInf(logContextRunner, "Execution finished")
+
+	LogInf(logContextRunner, "Execution finished for %s ...", cmd.Path)
 
 	if err != nil {
-		LogErr(logContextRunner, "Error occurred during execution")
+		LogErr(logContextRunner, "Error occurred during execution for %s", cmd.Path)
+		cmdDoneChan <- false // signal we're done running the script
 	}
+
+	// Signal we're done running the script
+	cmdDoneChan <- true
 }
 
 //Check if a script exists
@@ -164,25 +175,37 @@ func HasScript(script string) (string, bool) {
 //Return the current stdout and stderr
 func Log() *chan string {
 	go func() {
-		syncChan <- true
+		// Set up pipes
 		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			LogErr(logContextRunner, "Error occurred while reading stdout/stderr")
+			//panic?
+		}
 		stderr, err := cmd.StderrPipe()
+		if err != nil {
+			LogErr(logContextRunner, "Error occurred while reading stdout/stderr")
+			//panic?
+		}
 		multi := io.MultiReader(stdout, stderr)
 		scanner := bufio.NewScanner(multi)
 
-		if err != nil {
-			LogErr(logContextRunner, "Error occurred while reading stdout/stderr")
-		}
+		// tell Start() we're ready
+		logSynChan <- true
+		LogDeb(logContextRunner, "Log() setup completed, ready to capture output")
 
 		for scanner.Scan() {
 			out := scanner.Text()
 			outChan <- out
 		}
 
-		endReadStart <- true
-		LogDeb(logContextRunner, "finished reading, sent sync to chan 'endReadStart'")
-		endReadLog <- true
-		LogDeb(logContextRunner, "finished reading, sent sync to chan 'endReadLog'")
+		//		stdout.Close()
+		//		stderr.Close()
+
+		// tell Start() we're done reading
+		logDoneChan <- true
+		LogDeb(logContextRunner, "Log() stdout/err capture completed")
+		//		endReadLog <- true
+		//		LogDeb(logContextRunner, "finished reading, sent sync to chan 'endReadLog'")
 	}()
 
 	return &outChan

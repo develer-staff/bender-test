@@ -61,7 +61,7 @@ func (c *Context) RunHandler(w web.ResponseWriter, r *web.Request) {
 
 // LogHandler handles /log requests
 func (c *Context) LogHandler(w web.ResponseWriter, r *web.Request) {
-	LogInf(logContextDaemon, "Receive LOG[%v] request from: %v", "Daemon", r.RemoteAddr)
+	//	LogInf(logContextDaemon, "Receive LOG[%v] request from: %v", "Daemon", r.RemoteAddr)
 	r.ParseForm()
 	name := r.PathParams["script"]
 	id := r.Form["uuid"][0]
@@ -86,7 +86,7 @@ func (c *Context) StatusHandler(w web.ResponseWriter, r *web.Request) {
 	//general state requests
 
 	if r.RequestURI == "/state" {
-		LogInf(logContextDaemon, "Receive STATE[%v] request from: %v", "Daemon", r.RemoteAddr)
+		//		LogInf(logContextDaemon, "Receive STATE[%v] request from: %v", "Daemon", r.RemoteAddr)
 		js, err := json.Marshal(daemon_localStatus)
 		if err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
